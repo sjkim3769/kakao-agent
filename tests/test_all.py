@@ -431,7 +431,7 @@ class TestSchedulerFix:
         """[PROD-01] _run_for_room이 _send_alert 밖에 독립 정의됐는지 확인"""
         import ast
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/scheduler/scheduler.py").read_text()
+        src = Path("src/scheduler/scheduler.py").read_text()
         tree = ast.parse(src)
 
         # DailyPipeline 클래스 찾기
@@ -453,7 +453,7 @@ class TestSchedulerFix:
         """[PROD-01] _send_alert 내부에 collect_daily 등 파이프라인 코드 없음"""
         import ast
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/scheduler/scheduler.py").read_text()
+        src = Path("src/scheduler/scheduler.py").read_text()
         tree = ast.parse(src)
 
         pipeline_class = next(
@@ -509,7 +509,7 @@ class TestDatabaseSchema:
     def test_message_analyses_has_unique_constraint(self):
         """[NEW-09] message_analyses에 (snapshot_id, user_id) UNIQUE 제약 존재 확인"""
         from pathlib import Path
-        schema = Path("/home/claude/kakao-agent/src/db/schema.sql").read_text()
+        schema = Path("src/db/schema.sql").read_text()
         assert "uq_analysis_snapshot_user" in schema, \
             "message_analyses UNIQUE 제약 없음 — ON CONFLICT DO UPDATE 동작 불가"
         assert "UNIQUE (snapshot_id, user_id)" in schema or \
@@ -518,13 +518,13 @@ class TestDatabaseSchema:
     def test_snapshot_has_unique_constraint(self):
         """1일 1회 수집 보장 UNIQUE 제약 확인"""
         from pathlib import Path
-        schema = Path("/home/claude/kakao-agent/src/db/schema.sql").read_text()
+        schema = Path("src/db/schema.sql").read_text()
         assert "uq_snapshot_date_room" in schema
 
     def test_agent_comments_has_unique_constraint(self):
         """1일 1댓글 보장 UNIQUE 제약 확인"""
         from pathlib import Path
-        schema = Path("/home/claude/kakao-agent/src/db/schema.sql").read_text()
+        schema = Path("src/db/schema.sql").read_text()
         assert "uq_comment_date_snapshot" in schema
 
 
@@ -534,7 +534,7 @@ class TestAPIRealStructure:
     def test_api_endpoints_have_db_dependency(self):
         """[NEW-01] 주요 엔드포인트가 get_db dependency 사용 확인"""
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/api/api.py").read_text()
+        src = Path("src/api/api.py").read_text()
         # 실제 DB 조회 함수들이 존재하는지
         assert "pool.acquire()" in src, "DB 쿼리 없음"
         assert "conn.fetch(" in src or "conn.fetchrow(" in src
@@ -542,7 +542,7 @@ class TestAPIRealStructure:
     def test_pipeline_run_actually_executes(self):
         """[NEW-03] background_tasks.add_task 주석 해제 확인"""
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/api/api.py").read_text()
+        src = Path("src/api/api.py").read_text()
         # 주석 처리된 add_task가 없어야 함
         assert "# background_tasks.add_task" not in src, \
             "background_tasks.add_task가 여전히 주석 처리됨"
@@ -551,7 +551,7 @@ class TestAPIRealStructure:
     def test_cors_not_hardcoded_localhost(self):
         """[NEW-02] CORS origins가 settings에서 로드됨"""
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/api/api.py").read_text()
+        src = Path("src/api/api.py").read_text()
         # 하드코딩된 단일 localhost만 있으면 안 됨
         # settings 또는 변수 참조여야 함
         assert "cors_allowed_origins" in src or "_cors_origins" in src
@@ -564,7 +564,7 @@ class TestAgentConnectionScope:
         """[NEW-06] _find_template이 SELECT+UPDATE를 같은 conn 블록에서 처리"""
         import ast
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/agent/agent.py").read_text()
+        src = Path("src/agent/agent.py").read_text()
         tree = ast.parse(src)
 
         # _find_template 메서드 찾기
@@ -587,20 +587,19 @@ class TestAgentConnectionScope:
         assert "transaction" in src
 
 
-class TestPromptCaching:
-    """[COST-01] Prompt Caching 설정 검증"""
+class TestGroqAPIFormat:
+    """Groq API 호출 포맷 검증"""
 
-    def test_llm_classifier_uses_cache_control(self):
-        """[COST-01] _call_llm이 cache_control ephemeral 사용 확인"""
+    def test_analyzer_uses_groq_format(self):
+        """analyzer.py가 Groq(OpenAI 호환) chat.completions 포맷 사용 확인"""
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/analyzer/analyzer.py").read_text()
-        assert "cache_control" in src, "Prompt Caching 미적용"
-        assert '"ephemeral"' in src or "'ephemeral'" in src
+        src = Path("src/analyzer/analyzer.py").read_text()
+        assert "chat.completions.create" in src
+        assert "choices[0].message.content" in src
 
-    def test_system_prompt_as_list_for_caching(self):
-        """[COST-01] system이 list[dict] 형태 (cache_control 지원)"""
-        import ast
+    def test_agent_uses_groq_format(self):
+        """agent.py가 Groq(OpenAI 호환) chat.completions 포맷 사용 확인"""
         from pathlib import Path
-        src = Path("/home/claude/kakao-agent/src/analyzer/analyzer.py").read_text()
-        # system=[{...cache_control...}] 패턴 존재 확인
-        assert "system=[" in src or 'system = [' in src
+        src = Path("src/agent/agent.py").read_text()
+        assert "chat.completions.create" in src
+        assert "choices[0].message.content" in src
