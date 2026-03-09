@@ -10,4 +10,5 @@ output/*.csv
 .DS_Store
 Thumbs.db
 *.txt
+!requirements.txt
 !tests/fixtures/*.txt
