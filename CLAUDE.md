@@ -271,11 +271,11 @@ CLAUDE.md (Orchestrator)
 
 ```env
 DATABASE_URL=postgresql://user:pass@localhost/kakao_agent
-ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY=gsk_...
 JWT_SECRET_KEY=<random-256bit>
 REDIS_URL=redis://localhost:6379
 CORS_ALLOWED_ORIGINS=https://your-domain.com
-LLM_MODEL=claude-sonnet-4-20250514
+LLM_MODEL=llama-3.3-70b-versatile
 ```
 
 ---

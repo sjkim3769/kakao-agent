@@ -331,21 +331,17 @@ class LLMClassifier:
 
         try:
             response = await asyncio.wait_for(
-                self.llm.messages.create(
+                self.llm.chat.completions.create(
                     model=self.model,
                     max_tokens=2000,
-                    system=[
-                        {
-                            "type": "text",
-                            "text": self._SYSTEM_PROMPT,
-                            "cache_control": {"type": "ephemeral"},  # [COST-01] 캐시 고정
-                        }
+                    messages=[
+                        {"role": "system", "content": self._SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt_content},
                     ],
-                    messages=[{"role": "user", "content": prompt_content}],
                 ),
                 timeout=30.0,
             )
-            raw_json = response.content[0].text.strip()
+            raw_json = response.choices[0].message.content.strip()
             items = json.loads(raw_json)
             return [self._parse_item(item) for item in items]
 

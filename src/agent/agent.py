@@ -187,15 +187,15 @@ class DailyCommentGenerator:
 
     async def _call_llm(self, context: DailyCommentContext, attempt: int) -> str:
         user_prompt = self._build_prompt(context, attempt)
-        # [COST-03 FIX] max_tokens=500 → 300 (시스템 프롬프트 '200자 내외'와 일치)
-        # [IMPACT-03] model은 외부 주입 가능하도록 클래스 속성화
-        response = await self.llm.messages.create(
+        response = await self.llm.chat.completions.create(
             model=self.model,
             max_tokens=300,
-            system=self._SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_prompt}],
+            messages=[
+                {"role": "system", "content": self._SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
         )
-        return response.content[0].text.strip()
+        return response.choices[0].message.content.strip()
 
     def _build_prompt(self, ctx: DailyCommentContext, attempt: int) -> str:
         retry_note = "\n⚠️ 이전 댓글이 품질 기준 미달. 더 자연스럽고 간결하게 재작성." if attempt > 0 else ""
@@ -328,15 +328,15 @@ class QAResponseBuilder:
 
 위 질문에 대한 답변을 300자 이내로 작성해주세요."""
 
-        # [COST-04 FIX] max_tokens=800 → 400 (카카오톡 1,000자 제한 기준 충분)
-        # [IMPACT-03 FIX] model 속성 사용
-        response = await self.llm.messages.create(
+        response = await self.llm.chat.completions.create(
             model=self.model,
             max_tokens=400,
-            system=self._SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": self._SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
         )
-        return response.content[0].text.strip()
+        return response.choices[0].message.content.strip()
 
 
 # ============================================================

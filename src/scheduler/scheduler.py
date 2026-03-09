@@ -19,7 +19,7 @@ import json
 import logging
 import asyncpg
 import aioredis
-import anthropic
+import groq
 from pathlib import Path
 from datetime import date, datetime
 from typing import Optional
@@ -262,7 +262,7 @@ async def main():
     )
 
     # LLM 클라이언트 — None 허용 안 함
-    llm_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    llm_client = groq.AsyncGroq(api_key=settings.groq_api_key)
 
     # [CRITICAL FIX] parser를 ConversationAnalyzer에 DI로 주입
     parser = KakaoTalkParser()

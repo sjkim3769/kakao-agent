@@ -6,9 +6,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://kakao:kakao@db:5432/kakao_agent
       - REDIS_URL=redis://redis:6379/0
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-20250514}
+      - LLM_MODEL=${LLM_MODEL:-llama-3.3-70b-versatile}
       - DATA_DIR=/data/kakao_exports
     volumes:
       - kakao_data:/data/kakao_exports

@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     redis_url: str = Field("redis://localhost:6379/0")
 
     # --- LLM ---
-    anthropic_api_key: str = Field(..., description="Anthropic API Key (필수)")
-    llm_model: str = Field("claude-sonnet-4-20250514")
+    groq_api_key: str = Field(..., description="Groq API Key (필수)")
+    llm_model: str = Field("llama-3.3-70b-versatile")
     llm_max_tokens: int = Field(1000, ge=100, le=8192)
     llm_timeout_seconds: int = Field(30, ge=5)
 
