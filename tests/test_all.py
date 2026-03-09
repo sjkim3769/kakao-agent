@@ -44,21 +44,16 @@ class TestRawMessageMasking:
         assert "test@example.com" not in content
         assert "[이메일]" in content
 
-    def test_name_masking_two_chars(self):
+    def test_display_name_preserved(self):
+        """[REAL-03] 닉네임은 가명이므로 마스킹 없이 원본 보존"""
         from src.collector.collector import RawMessage
-        assert RawMessage._mask_name("김민") == "김*"
-
-    def test_name_masking_three_chars(self):
-        from src.collector.collector import RawMessage
-        assert RawMessage._mask_name("홍길동") == "홍*동"
-
-    def test_name_masking_four_chars(self):
-        from src.collector.collector import RawMessage
-        assert RawMessage._mask_name("김철수민") == "김**민"
-
-    def test_name_single_char_unchanged(self):
-        from src.collector.collector import RawMessage
-        assert RawMessage._mask_name("김") == "김"
+        msg = RawMessage(
+            timestamp=datetime.now(),
+            user_id="u_test",
+            display_name="위스킹/M/81/08/MEL/CT",
+            content="테스트",
+        )
+        assert msg.display_name == "위스킹/M/81/08/MEL/CT"
 
 
 class TestKakaoTalkParser:
@@ -201,8 +196,8 @@ class TestLLMClassifier:
 
     @pytest.mark.asyncio
     async def test_valid_llm_response_parsed(self):
-        """LLM 정상 응답 파싱 테스트"""
-        mock_response = json.dumps([{
+        """LLM 정상 응답 파싱 테스트 (Groq 응답 포맷)"""
+        mock_content = json.dumps([{
             "index": 0,
             "question_type": "technical_question",
             "topic_tags": ["python", "오류처리"],
@@ -212,14 +207,22 @@ class TestLLMClassifier:
             "needs_agent_response": True,
             "context_summary": "Python 예외 처리 질문",
         }])
-        
-        mock_llm = AsyncMock()
-        mock_llm.call.return_value = mock_response
+
+        # Groq 응답 포맷: response.choices[0].message.content
+        mock_message = MagicMock()
+        mock_message.content = mock_content
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_llm = MagicMock()
+        mock_llm.chat.completions.create = AsyncMock(return_value=mock_response)
 
         from src.analyzer.analyzer import LLMClassifier
         clf = LLMClassifier(mock_llm)
         results = await clf.classify_batch(["Python 에러 처리 어떻게 하나요?"])
-        
+
         assert len(results) == 1
         assert results[0].question_type == "technical_question"
         assert results[0].needs_agent_response is True
@@ -289,18 +292,21 @@ class TestKakaoAgentDailyLimit:
     @pytest.mark.asyncio
     async def test_skip_if_already_commented(self):
         """이미 댓글 달린 날에는 Agent 실행 스킵"""
-        mock_db = AsyncMock()
         mock_conn = AsyncMock()
-        mock_db.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_db.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-        
-        # 이미 댓글 있음 시뮬레이션
         mock_conn.fetchrow.return_value = {"comment_id": "existing-id"}
-        
+
+        # asyncpg pool.acquire() → async context manager
+        mock_acquire = MagicMock()
+        mock_acquire.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_acquire.__aexit__ = AsyncMock(return_value=False)
+
+        mock_db = MagicMock()
+        mock_db.acquire.return_value = mock_acquire
+
         from src.agent.agent import KakaoAgent
-        agent = KakaoAgent(mock_db, AsyncMock())
+        agent = KakaoAgent(mock_db, MagicMock())
         result = await agent.run_daily("room_001", date.today())
-        
+
         assert result.get("skipped") is True
 
 
@@ -399,9 +405,9 @@ class TestCostOptimizations:
 
     def test_dynamic_batch_no_lazy_import(self):
         """[NEW-04] classify_batch 내부에 lazy import 없음 확인"""
-        import ast, inspect
+        import ast, inspect, textwrap
         from src.analyzer.analyzer import LLMClassifier
-        src = inspect.getsource(LLMClassifier.classify_batch)
+        src = textwrap.dedent(inspect.getsource(LLMClassifier.classify_batch))
         tree = ast.parse(src)
         lazy = [
             n for n in ast.walk(tree)
