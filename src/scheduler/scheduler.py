@@ -18,7 +18,7 @@ import asyncio
 import json
 import logging
 import asyncpg
-import aioredis
+import redis.asyncio as aioredis
 import groq
 from pathlib import Path
 from datetime import date, datetime

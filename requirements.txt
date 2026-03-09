@@ -12,8 +12,7 @@ asyncpg==0.29.0
 sqlalchemy[asyncio]==2.0.30
 
 # 캐시
-redis==5.0.4
-aioredis==2.0.1
+redis[asyncio]==5.0.4
 
 # 스케줄러
 APScheduler==3.10.4
