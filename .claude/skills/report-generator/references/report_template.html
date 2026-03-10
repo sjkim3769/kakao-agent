@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>카카오 채팅 분석 — {{date}}</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #3B82F6;
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #1E293B;
+      --muted: #64748B;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+           background: var(--bg); color: var(--text); }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+    header { background: var(--primary); color: #fff; padding: 24px;
+             border-radius: 12px; margin-bottom: 32px; }
+    header h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    header .meta { font-size: 0.9rem; opacity: 0.85; }
+    section { margin-bottom: 40px; }
+    section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px;
+                 padding-bottom: 8px; border-bottom: 2px solid var(--primary); }
+    .card { background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 20px; margin-bottom: 12px; }
+    .topic-rank { display: inline-block; background: var(--primary);
+                  color: #fff; border-radius: 50%; width: 28px; height: 28px;
+                  text-align: center; line-height: 28px; font-size: 0.85rem;
+                  margin-right: 10px; font-weight: 700; }
+    .topic-title { font-size: 1rem; font-weight: 700; }
+    .topic-summary { color: var(--muted); font-size: 0.9rem;
+                     margin-top: 8px; line-height: 1.6; white-space: pre-line; }
+    /* 아코디언 */
+    .accordion { border: 1px solid var(--border); border-radius: 10px;
+                 margin-bottom: 8px; overflow: hidden; }
+    .accordion-header { padding: 14px 18px; cursor: pointer;
+                        display: flex; justify-content: space-between;
+                        align-items: center; background: var(--card);
+                        font-weight: 600; }
+    .accordion-header:hover { background: var(--bg); }
+    .domain-badge { font-size: 0.75rem; background: var(--primary);
+                    color: #fff; padding: 2px 8px; border-radius: 12px; }
+    .accordion-body { padding: 16px 18px; border-top: 1px solid var(--border);
+                      background: var(--bg); display: none; }
+    .accordion-body.open { display: block; }
+    .question-text { font-weight: 600; margin-bottom: 8px; }
+    .answer-text { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+    .confidence { font-size: 0.75rem; margin-top: 6px; }
+    .confidence.high { color: #10B981; }
+    .confidence.medium { color: #F59E0B; }
+    .confidence.low { color: #EF4444; }
+    /* 차트 */
+    .chart-wrap { background: var(--card); border: 1px solid var(--border);
+                  border-radius: 10px; padding: 20px; }
+    .chart-wrap canvas { max-height: 320px; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 640px) { .chart-row { grid-template-columns: 1fr; } }
+    footer { text-align: center; color: var(--muted); font-size: 0.8rem;
+             padding: 24px 0; border-top: 1px solid var(--border); margin-top: 40px; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>카카오 채팅 분석 리포트 — {{date}}</h1>
+    <div class="meta">
+      총 참여자 {{total_users}}명 &nbsp;|&nbsp; 총 메시지 {{total_messages}}건
+    </div>
+  </header>
+
+  <!-- Section 1: 핵심 주제 -->
+  <section id="section-topics">
+    <h2>1. 오늘의 핵심 주제</h2>
+    {{topics_html}}
+  </section>
+
+  <!-- Section 2: 도메인별 Q&A -->
+  <section id="section-qa">
+    <h2>2. 도메인별 질문 & 답변</h2>
+    {{qa_html}}
+  </section>
+
+  <!-- Section 3: 활발한 사용자 TOP 10 -->
+  <section id="section-top10">
+    <h2>3. 활발한 사용자 TOP 10</h2>
+    <div class="chart-wrap">
+      <canvas id="chart-top10"></canvas>
+    </div>
+  </section>
+
+  <!-- Section 4: 시간대별 대화 밀도 -->
+  <section id="section-hourly">
+    <h2>4. 시간대별 대화 밀도</h2>
+    <div class="chart-wrap">
+      <canvas id="chart-hourly"></canvas>
+    </div>
+  </section>
+
+  <!-- Section 5: 커뮤니티 지역 현황 -->
+  <section id="section-city">
+    <h2>5. 커뮤니티 지역 현황</h2>
+    <div class="chart-wrap">
+      <canvas id="chart-city"></canvas>
+    </div>
+  </section>
+
+  <!-- Section 6: 비자상태 · 연령대 분포 -->
+  <section id="section-visa-age">
+    <h2>6. 비자상태 · 연령대 분포</h2>
+    <div class="chart-row">
+      <div class="chart-wrap"><canvas id="chart-visa"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-age"></canvas></div>
+    </div>
+  </section>
+
+  <footer>생성 시각: {{generated_at}}</footer>
+</div>
+
+<script>
+// ── 데이터 ──────────────────────────────────────────────────────
+const top10Labels = {{top10_labels}};
+const top10Data   = {{top10_data}};
+const hourlyLabels = {{hourly_labels}};
+const hourlyData   = {{hourly_data}};
+const cityLabels  = {{city_labels}};
+const cityData    = {{city_data}};
+const visaLabels  = {{visa_labels}};
+const visaData    = {{visa_data}};
+const ageLabels   = {{age_labels}};
+const ageData     = {{age_data}};
+
+// ── 팔레트 ──────────────────────────────────────────────────────
+const COLORS = [
+  '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
+  '#06B6D4','#F97316','#84CC16','#EC4899','#6B7280'
+];
+
+// ── Chart 3: TOP 10 수평 바차트 ──────────────────────────────────
+new Chart(document.getElementById('chart-top10'), {
+  type: 'bar',
+  data: {
+    labels: top10Labels,
+    datasets: [{ label: '메시지 수', data: top10Data,
+                 backgroundColor: COLORS[0], borderRadius: 4 }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: '#E2E8F0' } },
+              y: { grid: { display: false } } }
+  }
+});
+
+// ── Chart 4: 시간대 라인차트 ────────────────────────────────────
+new Chart(document.getElementById('chart-hourly'), {
+  type: 'line',
+  data: {
+    labels: hourlyLabels,
+    datasets: [{ label: '메시지 수', data: hourlyData,
+                 borderColor: COLORS[0], backgroundColor: COLORS[0] + '22',
+                 fill: true, tension: 0.4, pointRadius: 3 }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#E2E8F0' } },
+              x: { grid: { display: false } } }
+  }
+});
+
+// ── Chart 5: 지역 도넛차트 ──────────────────────────────────────
+new Chart(document.getElementById('chart-city'), {
+  type: 'doughnut',
+  data: {
+    labels: cityLabels,
+    datasets: [{ data: cityData, backgroundColor: COLORS, borderWidth: 2 }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'right' } }
+  }
+});
+
+// ── Chart 6a: 비자상태 파이차트 ─────────────────────────────────
+new Chart(document.getElementById('chart-visa'), {
+  type: 'pie',
+  data: {
+    labels: visaLabels,
+    datasets: [{ data: visaData, backgroundColor: COLORS, borderWidth: 2 }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom' },
+               title: { display: true, text: '비자 상태 분포' } }
+  }
+});
+
+// ── Chart 6b: 연령대 바차트 ─────────────────────────────────────
+new Chart(document.getElementById('chart-age'), {
+  type: 'bar',
+  data: {
+    labels: ageLabels,
+    datasets: [{ label: '인원', data: ageData,
+                 backgroundColor: COLORS[1], borderRadius: 4 }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false },
+               title: { display: true, text: '연령대 분포' } },
+    scales: { y: { beginAtZero: true, grid: { color: '#E2E8F0' } },
+              x: { grid: { display: false } } }
+  }
+});
+
+// ── 아코디언 토글 ────────────────────────────────────────────────
+document.querySelectorAll('.accordion-header').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const body = btn.nextElementSibling;
+    body.classList.toggle('open');
+    btn.querySelector('.toggle-icon').textContent =
+      body.classList.contains('open') ? '▲' : '▼';
+  });
+});
+</script>
+</body>
+</html>

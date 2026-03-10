@@ -1,14 +1,22 @@
+# 환경변수 (절대 git 포함 금지)
+.env
+
+# 중간 산출물 (원본 카카오톡 데이터 보호)
+output/
+
+# 입력 파일 (개인 대화 데이터)
+input/
+
+# Python
 __pycache__/
 *.py[cod]
+*.pyc
 .venv/
 venv/
-.env
-output/*.json
-output/*.csv
+*.egg-info/
+
+# IDE
 .vscode/settings.json
 .idea/
 .DS_Store
 Thumbs.db
-*.txt
-!requirements.txt
-!tests/fixtures/*.txt
