@@ -24,7 +24,13 @@ cp "$OUTPUT_FILE" "$DOCS_DIR/"
 echo "  복사 완료: $OUTPUT_FILE → $DOCS_DIR/"
 
 # 3. index.html 갱신 (docs/ 내 HTML 파일 최신순 목록)
-python3 - <<PYEOF
+PYTHON="${PYTHON:-python3}"
+# Windows Git Bash 환경의 Python 경로 자동 감지
+if ! command -v python3 &>/dev/null; then
+  PYTHON="/c/Users/capri/AppData/Local/Programs/Python/Python38-32/python.exe"
+fi
+
+"$PYTHON" - <<PYEOF
 import os, re
 from pathlib import Path
 
