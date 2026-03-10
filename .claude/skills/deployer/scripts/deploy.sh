@@ -24,21 +24,19 @@ cp "$OUTPUT_FILE" "$DOCS_DIR/"
 echo "  복사 완료: $OUTPUT_FILE → $DOCS_DIR/"
 
 # 3. index.html 갱신 (docs/ 내 HTML 파일 최신순 목록)
-PYTHON="${PYTHON:-python3}"
-# Windows Git Bash 환경의 Python 경로 자동 감지
-if ! command -v python3 &>/dev/null; then
-  PYTHON="/c/Users/capri/AppData/Local/Programs/Python/Python38-32/python.exe"
-fi
+PYTHON="${PYTHON:-/c/Users/capri/AppData/Local/Programs/Python/Python38-32/python.exe}"
+# Git Bash /c/... 경로 → Python용 Windows 경로 변환
+DOCS_DIR_WIN=$(cygpath -w "$DOCS_DIR")
+INDEX_FILE_WIN=$(cygpath -w "$INDEX_FILE")
 
-"$PYTHON" - <<PYEOF
-import os, re
+"$PYTHON" - "$DOCS_DIR_WIN" "$INDEX_FILE_WIN" <<'PYEOF'
+import sys, re
 from pathlib import Path
 
-docs_dir = Path("$DOCS_DIR")
-reports = sorted(
-    [f for f in docs_dir.glob("*_report.html")],
-    reverse=True
-)
+docs_dir = Path(sys.argv[1])
+index_file = Path(sys.argv[2])
+
+reports = sorted(docs_dir.glob("*_report.html"), reverse=True)
 
 items = ""
 for r in reports:
@@ -70,14 +68,18 @@ html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-Path("$INDEX_FILE").write_text(html, encoding='utf-8')
+index_file.write_text(html, encoding='utf-8')
 print("  index.html 갱신 완료")
 PYEOF
 
 # 4. git push
 cd "$REPO_DIR"
 git add docs/
-git commit -m "report: $DATE"
-git push origin main
+if git diff --cached --quiet; then
+  echo "  변경사항 없음 — 이미 최신 상태"
+else
+  git commit -m "report: $DATE"
+  git push origin main
+fi
 
 echo "[STEP 6] 배포 완료"
