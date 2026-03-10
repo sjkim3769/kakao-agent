@@ -353,7 +353,7 @@ def run_pipeline(target_date: str, deploy: bool = False):
         try:
             result = subprocess.run(
                 ['bash', str(DEPLOY_SCRIPT), target_date, str(BASE_DIR)],
-                capture_output=True, text=True
+                capture_output=True, text=True, encoding='utf-8', errors='replace'
             )
             if result.returncode != 0:
                 error_log('STEP6', f"deploy.sh 실패: {result.stderr}")
