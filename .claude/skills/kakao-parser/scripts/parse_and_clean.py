@@ -9,6 +9,7 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def normalize_gender(raw: str) -> str:
     return GENDER_MAP.get(key, 'UNKNOWN')
 
 
-def normalize_birth_year(raw: str) -> int | None:
+def normalize_birth_year(raw: str) -> Optional[int]:
     try:
         y = int(raw.strip())
         if y < 100:  # 2자리
@@ -88,7 +89,7 @@ def normalize_birth_year(raw: str) -> int | None:
         return None
 
 
-def normalize_arrival_year(raw: str) -> int | None:
+def normalize_arrival_year(raw: str) -> Optional[int]:
     try:
         y = int(raw.strip())
         if y < 100:
@@ -98,7 +99,7 @@ def normalize_arrival_year(raw: str) -> int | None:
         return None
 
 
-def parse_nickname(raw: str) -> tuple[str, dict]:
+def parse_nickname(raw: str) -> Tuple[str, dict]:
     """닉네임 원본에서 메타 필드 추출 (슬래시/공백 혼재 구분자 지원)."""
     # 구분자 통일: 슬래시 또는 2개 이상 공백
     parts = re.split(r'[/\s]+', raw.strip())

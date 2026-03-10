@@ -9,6 +9,7 @@ import json
 import logging
 from collections import defaultdict
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def _merge_small_groups(dist: dict) -> dict:
     return dict(sorted(result.items(), key=lambda x: -x[1]))
 
 
-def _age_group(birth_year: int | None) -> str | None:
+def _age_group(birth_year: Optional[int]) -> Optional[str]:
     if birth_year is None:
         return None
     current_year = 2026
@@ -48,7 +49,7 @@ def _age_group(birth_year: int | None) -> str | None:
         return '50s+'
 
 
-def _arrival_group(arrival_year: int | None) -> str | None:
+def _arrival_group(arrival_year: Optional[int]) -> Optional[str]:
     if arrival_year is None:
         return None
     if arrival_year <= 2015:
